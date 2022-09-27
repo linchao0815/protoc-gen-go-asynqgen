@@ -24,11 +24,12 @@ func Register{{.ServiceType}}JobServer(mux *asynq.ServeMux, srv {{.ServiceType}}
 {{range .Methods}}
 func _{{$svrType}}_{{.Name}}_Job_Handler(srv {{$svrType}}JobServer) func(context.Context, *asynq.Task) error {
 	return func(ctx context.Context, task *asynq.Task) error {
-		t := &myasynq.TaskPaylod{}
+		var in {{.Request}}
+		t := &myasynq.TaskPaylod{In: &in}
 		if err := json.Unmarshal(task.Payload(), &t); err != nil {
 			return fmt.Errorf("%s req=%s err=%s",task.Type(), t, err)
 		}	
-		ctx, span := rkasynq.NewSpan(ctx, "{{.Name}}")
+		ctx, span := myasynq.NewSpan(ctx, "{{.Name}}")
 		err := srv.{{.Name}}(ctx, t.In.(*{{.Request}}))
 		span.SetAttributes(attribute.String("req", myasynq.ToMarshal(t)))
 		myasynq.EndSpan(span, err == nil)
@@ -50,11 +51,10 @@ func (j *{{$svrType}}SvcJob) {{.Name}}(ctx context.Context,in *{{.Request}}, opt
 	}else{
 		fmt.Println("{{.Name}} GetTracerPropagator=nil")
 	}	
-	t:=&myasynq.TaskPaylod{
+	payload, err := json.Marshal(myasynq.TaskPaylod{
 		In: in,
 		TraceHeader: header,
-	}	
-	payload, err := json.Marshal(t)
+	})
 	if err != nil {
 		return nil, nil, err
 	}
