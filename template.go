@@ -45,12 +45,7 @@ var {{.ServiceType}}Job {{.ServiceType}}SvcJob
 func (j *{{$svrType}}SvcJob) {{.Name}}(ctx context.Context,in *{{.Request}}, opts ...asynq.Option) (*asynq.Task, *http.Header, error) {
 	// get trace metadata
 	header := http.Header{}	
-	pg:=rkgrpcctx.GetTracerPropagator(ctx)
-	if pg != nil{
-		pg.Inject(ctx, propagation.HeaderCarrier(header))	
-	}else{
-		fmt.Println("{{.Name}} GetTracerPropagator=nil")
-	}	
+	rkgrpcctx.GetTracerPropagator(ctx).Inject(ctx, propagation.HeaderCarrier(header))
 	payload, err := json.Marshal(myasynq.TaskPaylod{
 		In: in,
 		TraceHeader: header,

@@ -12,13 +12,15 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-import "fmt"
-import "net/http"
-import "myasynq"
-import "strings"
-import "go.opentelemetry.io/otel/propagation"
-import "go.opentelemetry.io/otel/attribute"
-import rkgrpcctx "github.com/rookie-ninja/rk-grpc/v2/middleware/context"
+import (
+	"fmt"
+	"net/http"
+	"myasynq"
+	"strings"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/attribute"
+	rkgrpcctx "github.com/rookie-ninja/rk-grpc/v2/middleware/context"
+)
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the asynq package it is being compiled against.
@@ -75,12 +77,7 @@ var UserJob UserSvcJob
 func (j *UserSvcJob) CreateUser(ctx context.Context, in *CreateUserPayload, opts ...asynq.Option) (*asynq.Task, *http.Header, error) {
 	// get trace metadata
 	header := http.Header{}
-	pg := rkgrpcctx.GetTracerPropagator(ctx)
-	if pg != nil {
-		pg.Inject(ctx, propagation.HeaderCarrier(header))
-	} else {
-		fmt.Println("CreateUser GetTracerPropagator=nil")
-	}
+	rkgrpcctx.GetTracerPropagator(ctx).Inject(ctx, propagation.HeaderCarrier(header))
 	payload, err := json.Marshal(myasynq.TaskPaylod{
 		In:          in,
 		TraceHeader: header,
@@ -96,12 +93,7 @@ func (j *UserSvcJob) CreateUser(ctx context.Context, in *CreateUserPayload, opts
 func (j *UserSvcJob) UpdateUser(ctx context.Context, in *UpdateUserPayload, opts ...asynq.Option) (*asynq.Task, *http.Header, error) {
 	// get trace metadata
 	header := http.Header{}
-	pg := rkgrpcctx.GetTracerPropagator(ctx)
-	if pg != nil {
-		pg.Inject(ctx, propagation.HeaderCarrier(header))
-	} else {
-		fmt.Println("UpdateUser GetTracerPropagator=nil")
-	}
+	rkgrpcctx.GetTracerPropagator(ctx).Inject(ctx, propagation.HeaderCarrier(header))
 	payload, err := json.Marshal(myasynq.TaskPaylod{
 		In:          in,
 		TraceHeader: header,

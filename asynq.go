@@ -43,25 +43,17 @@ func generateFileContent(gen *protogen.Plugin, file *protogen.File, g *protogen.
 		return
 	}
 	desc := `
-	import "fmt"
-	import "net/http"
-	import "myasynq"
-	import "strings"
-	import "go.opentelemetry.io/otel/propagation"
-	import "go.opentelemetry.io/otel/attribute"
-	import rkgrpcctx "github.com/rookie-ninja/rk-grpc/v2/middleware/context"
-	`
+	import (	
+		"fmt"
+		"net/http"
+		"myasynq"
+		"strings"
+		"go.opentelemetry.io/otel/propagation"
+		"go.opentelemetry.io/otel/attribute"
+		rkgrpcctx "github.com/rookie-ninja/rk-grpc/v2/middleware/context"
+	)
+`
 	g.P(desc)
-	/*
-		//g.P("import	\"igspkg/logger\"")
-		//g.P("import	\"igspkg/igstrace\"")
-		g.P("import	\"net/http\"")
-		g.P("import	\"strings\"")
-		g.P("import	\"go.opentelemetry.io/otel/propagation\"")
-		g.P("import	\"go.opentelemetry.io/otel/attribute\"")
-		//g.P("import rkgrpcmid \"github.com/rookie-ninja/rk-grpc/v2/middleware\"")
-		g.P("import rkgrpcctx \"github.com/rookie-ninja/rk-grpc/v2/middleware/context\"")
-	*/
 	g.P("// This is a compile-time assertion to ensure that this generated file")
 	g.P("// is compatible with the asynq package it is being compiled against.")
 	g.P("var _ = new(", contextPackage.Ident("Context"), ")")
