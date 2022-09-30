@@ -11,8 +11,8 @@ generate protobuf for [asynq](https://github.com/hibiken/asynq) payload.
 go get -d google.golang.org/protobuf/cmd/protoc-gen-go
 go get -d google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
-# install protoc-gen-go-asynq
-go get -d github.com/jmploop/protoc-gen-go-asynq@v1.0.4
+# install protoc-gen-go-asynqgen
+go install github.com/linchao0815/protoc-gen-go-asynqgen@v1.0.11
 ```
 
 ### 2. copy proto/asynq.proto to your project

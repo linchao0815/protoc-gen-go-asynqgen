@@ -9,85 +9,80 @@ import (
 var asynqTemplate = `
 {{$svrType := .ServiceType}}
 {{$svrName := .ServiceName}}
-type {{.ServiceType}}JobServer interface {
+type {{.ServiceType}}TaskServer interface {
 {{- range .MethodSets}}
 	{{.Name}}(context.Context, *{{.Request}}) (error)
 {{- end}}
 }
 
-func Register{{.ServiceType}}JobServer(mux *asynq.ServeMux, srv {{.ServiceType}}JobServer) {
+func Register{{.ServiceType}}TaskServer(mux *asynq.ServeMux, srv {{.ServiceType}}TaskServer) {
 	{{- range .Methods}}
-	mux.HandleFunc("{{.Typename}}", _{{$svrType}}_{{.Name}}_Job_Handler(srv))
+	mux.HandleFunc("{{.Typename}}", _{{$svrType}}_{{.Name}}_Task_Handler(srv))
 	{{- end}}
 }
 
 {{range .Methods}}
-func _{{$svrType}}_{{.Name}}_Job_Handler(srv {{$svrType}}JobServer) func(context.Context, *asynq.Task) error {
+func _{{$svrType}}_{{.Name}}_Task_Handler(srv {{$svrType}}TaskServer) func(context.Context, *asynq.Task) error {
 	return func(ctx context.Context, task *asynq.Task) error {
-		var in {{.Request}}
-		t := &myasynq.TaskPaylod{In: &in}
-		if err := json.Unmarshal(task.Payload(), &t); err != nil {
-			return fmt.Errorf("%s req=%s err=%s",task.Type(), t, err)
-		}	
-		ctx, span := myasynq.NewSpan(ctx, "{{.Name}}")
-		err := srv.{{.Name}}(ctx, t.In.(*{{.Request}}))
-		span.SetAttributes(attribute.String("req", myasynq.ToMarshal(t)))
-		myasynq.EndSpan(span, err == nil)
+		in := &{{.Request}}{}
+
+		ctx, span, err := _handle_task_before(ctx, task, in)
+		if err != nil {
+			return err
+		}
+
+		err = srv.{{.Name}}(ctx, in)
+
+		_handle_task_after(span, err)
+
 		return err
 	}
 }
 {{end}}
 
-type {{.ServiceType}}SvcJob struct {}
-var {{.ServiceType}}Job {{.ServiceType}}SvcJob
+type {{.ServiceType}}TaskClient interface {
+{{- range .MethodSets}}
+	{{.Name}}(ctx context.Context, req *{{.Request}}, opts ...asynq.Option) (info *asynq.TaskInfo, span oteltrace.Span, err error) 
+{{- end}}
+}
+
+type {{.ServiceType}}TaskClientImpl struct{
+	cc *asynq.Client
+}
+	
+func New{{.ServiceType}}TaskClient (client *asynq.Client) {{.ServiceType}}TaskClient {
+	return &{{.ServiceType}}TaskClientImpl{client}
+}
 
 {{range .MethodSets}}
-func (j *{{$svrType}}SvcJob) {{.Name}}(ctx context.Context,in *{{.Request}}, opts ...asynq.Option) (*asynq.Task, *http.Header, error) {
+func (c *{{$svrType}}TaskClientImpl) {{.Name}}(ctx context.Context, in *{{.Request}}, opts ...asynq.Option) (*asynq.TaskInfo, oteltrace.Span, error) {
+	if rkgrpcctx.GetTracerPropagator(ctx) != nil {
+		ctx = rkgrpcctx.InjectSpanToNewContext(ctx)
+	}
+
+	spanCtx := oteltrace.SpanContextFromContext(ctx)
+	ctx, span := tHolder.tracer.Start(oteltrace.ContextWithRemoteSpanContext(ctx, spanCtx), "{{.Name}}Client")
+	defer span.End()
+
 	// get trace metadata
-	header := http.Header{}	
-	rkgrpcctx.GetTracerPropagator(ctx).Inject(ctx, propagation.HeaderCarrier(header))
-	payload, err := json.Marshal(myasynq.TaskPaylod{
-		In: in,
-		TraceHeader: header,
+	m := make(map[string]string)
+	tHolder.propagator.Inject(ctx, propagation.MapCarrier(m))
+
+	wrap, err := json.Marshal(wrapPayload{
+		Trace: m,
+		Payload: in,
 	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	task := asynq.NewTask("{{.Typename}}", payload, opts...)
-	return task, &header, nil
-}
-{{end}}
+	task := asynq.NewTask("{{.Typename}}", wrap, opts...)
 
-type {{.ServiceType}}JobClient interface {
-{{- range .MethodSets}}
-	{{.Name}}(ctx context.Context, req *{{.Request}}, opts ...asynq.Option) (info *asynq.TaskInfo, err error) 
-{{- end}}
-}
-
-type {{.ServiceType}}JobClientImpl struct{
-	cc *asynq.Client
-}
-	
-func New{{.ServiceType}}JobClient (client *asynq.Client) {{.ServiceType}}JobClient {
-	return &{{.ServiceType}}JobClientImpl{client}
-}
-
-{{range .MethodSets}}
-func (c *{{$svrType}}JobClientImpl) {{.Name}}(ctx context.Context, in *{{.Request}}, opts ...asynq.Option) (*asynq.TaskInfo, error) {
-	task, header, err := {{$svrType}}Job.{{.Name}}(ctx, in, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("ServerA_TaskJob.GameTest_Task req:%s err:%s",in,err)	
-	}
 	info, err := c.cc.Enqueue(task)
 	if err != nil {
-		return nil, fmt.Errorf("ServerA_TaskJob.GameTest_Task Enqueue req:%s err:%s",in,err)
+		return nil, nil, err
 	}
-	// 把 Trace 信息，存入 Metadata，以 Header 的形式返回给 httpclient
-	for k, v := range *header {
-		rkgrpcctx.AddHeaderToClient(ctx, k, strings.Join(v, ","))
-	}	
-	return info, nil
+	return info, span, nil
 }
 {{end}}
 `
