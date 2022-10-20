@@ -415,26 +415,12 @@ func generateFileContent(gen *protogen.Plugin, file *protogen.File, g *protogen.
 		return
 	}
 	desc := `
+	
 	import (
-		"github.com/rookie-ninja/rk-entry/v2/entry"
-		"github.com/rookie-ninja/rk-logger"
-		"go.opentelemetry.io/contrib"
-		"go.opentelemetry.io/otel/codes"
-		"go.opentelemetry.io/otel/exporters/jaeger"
-		"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-		"google.golang.org/grpc/metadata"
-		sdkresource "go.opentelemetry.io/otel/sdk/resource"
-		otelcodes "go.opentelemetry.io/otel/codes"
-		sdktrace "go.opentelemetry.io/otel/sdk/trace"
-		semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-		oteltrace "go.opentelemetry.io/otel/trace"
-		"net/http"
-		"os"
-		"path"
-		"fmt"
+		"myasynq"
 		"go.opentelemetry.io/otel/propagation"
-		"go.opentelemetry.io/otel/attribute"
-		"github.com/rookie-ninja/rk-grpc/v2/middleware/context"
+		oteltrace "go.opentelemetry.io/otel/trace"
+		rkgrpcctx "github.com/rookie-ninja/rk-grpc/v2/middleware/context"		
 	)
 `
 	g.P(desc)
@@ -445,9 +431,9 @@ func generateFileContent(gen *protogen.Plugin, file *protogen.File, g *protogen.
 	g.P("var _ = new(", emptyPackage.Ident("Empty"), ")")
 	g.P("var _ = new(", protoPackage.Ident("Message"), ")")
 	g.P("var _ = new(", jsonPackage.Ident("InvalidUTF8Error"), ")")
-	g.P(traceHolder)
-	g.P(taskHandler)
-	g.P(wrapPayload)
+	//g.P(traceHolder)
+	//g.P(taskHandler)
+	//g.P(wrapPayload)
 	for _, service := range file.Services {
 		genService(gen, file, g, service)
 	}

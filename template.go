@@ -26,14 +26,14 @@ func _{{$svrType}}_{{.Name}}_Task_Handler(srv {{$svrType}}TaskServer) func(conte
 	return func(ctx context.Context, task *asynq.Task) error {
 		in := &{{.Request}}{}
 
-		ctx, span, err := _handle_task_before(ctx, task, in)
+		ctx, span, err := myasynq.Handle_task_before(ctx, task, in)
 		if err != nil {
 			return err
 		}
 
 		err = srv.{{.Name}}(ctx, in)
 
-		_handle_task_after(span, err)
+		myasynq.Handle_task_after(span, err)
 
 		return err
 	}
@@ -61,14 +61,14 @@ func (c *{{$svrType}}TaskClientImpl) {{.Name}}(ctx context.Context, in *{{.Reque
 	}
 
 	spanCtx := oteltrace.SpanContextFromContext(ctx)
-	ctx, span := tHolder.tracer.Start(oteltrace.ContextWithRemoteSpanContext(ctx, spanCtx), "{{.Name}}Client")
+	ctx, span := myasynq.HolderTracer().Start(oteltrace.ContextWithRemoteSpanContext(ctx, spanCtx), "{{.Name}}Client")
 	defer span.End()
 
 	// get trace metadata
 	m := make(map[string]string)
-	tHolder.propagator.Inject(ctx, propagation.MapCarrier(m))
+	myasynq.HolderPropagator().Inject(ctx, propagation.MapCarrier(m))
 
-	wrap, err := json.Marshal(wrapPayload{
+	wrap, err := json.Marshal(myasynq.WrapPayload{
 		Trace: m,
 		Payload: in,
 	})

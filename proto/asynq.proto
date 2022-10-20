@@ -4,12 +4,12 @@ package asynq;
 
 import "google/protobuf/descriptor.proto";
 
-option go_package = "github.com/linchao0815/protoc-gen-go-asynqgen/proto;asynq";
+option go_package = "github.com/linchao0815/protoc-gen-go-asynq/proto;asynq";
 option java_multiple_files = true;
 option java_package = "asynq";
 
 extend google.protobuf.MethodOptions {
-    Task task = 567891;
+    Task task = 567890;
 }
 
 message Task {
